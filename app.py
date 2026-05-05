@@ -2,8 +2,7 @@ from flask import Flask, render_template, request
 import sqlite3
 from datetime import datetime
 import qrcode
-import io
-import base64
+import os
 
 app = Flask(__name__)
 
@@ -12,6 +11,7 @@ def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
+    # Assets table
     c.execute('''
     CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,28 +23,40 @@ def init_db():
     )
     ''')
 
+    # Logs table (NEW FEATURE)
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_id INTEGER,
+        action TEXT,
+        timestamp TEXT
+    )
+    ''')
+
     conn.commit()
     conn.close()
 
 init_db()
 
+# ---------------- LOG FUNCTION ----------------
+def add_log(asset_id, action):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+
+    c.execute("""
+        INSERT INTO logs (asset_id, action, timestamp)
+        VALUES (?, ?, ?)
+    """, (asset_id, action, now))
+
+    conn.commit()
+    conn.close()
+
 # ---------------- HOME PAGE ----------------
 @app.route('/')
 def index():
     return render_template('add.html')
-
-# ---------------- VIEW ALL ASSETS ----------------
-@app.route('/assets')
-def assets():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM assets")
-    data = c.fetchall()
-
-    conn.close()
-
-    return render_template('assets.html', data=data)
 
 # ---------------- ADD ASSET ----------------
 @app.route('/add', methods=['POST'])
@@ -68,24 +80,26 @@ def add():
     conn.commit()
     conn.close()
 
-    # ---------------- DYNAMIC QR CODE (NO FILE SAVE) ----------------
-    base_url = "https://asset-tracker-system-jg9d.onrender.com/"  # CHANGE AFTER DEPLOY
+    # LOG: asset created
+    add_log(asset_id, "Asset Created")
+
+    # ---------------- QR CODE ----------------
+    base_url = "https://your-app-name.onrender.com"  # CHANGE THIS AFTER DEPLOY
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
 
-    buffer = io.BytesIO()
-    qr.save(buffer, format="PNG")
+    if not os.path.exists("static"):
+        os.makedirs("static")
 
-    img_str = base64.b64encode(buffer.getvalue()).decode()
+    qr_path = f"static/qr_{asset_id}.png"
+    qr.save(qr_path)
 
     return f"""
     <h2>Asset Added Successfully!</h2>
     <p>Scan this QR:</p>
-    <img src="data:image/png;base64,{img_str}" width="200">
-    <br><br>
-    <a href='/'>⬅️ Back</a> | 
-    <a href='/assets'>📋 View All Assets</a>
+    <img src='/{qr_path}' width='200'>
+    <br><a href='/'>Go Back</a>
     """
 
 # ---------------- VIEW ASSET ----------------
@@ -100,13 +114,26 @@ def asset(id):
     if not data:
         return "Asset not found"
 
+    # update scan count
     new_count = data[4] + 1
 
     c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
     conn.commit()
     conn.close()
 
-    return render_template('asset.html', data=data, scan=new_count)
+    # LOG: QR scanned
+    add_log(id, "QR Scanned")
+
+    # get logs
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM logs WHERE asset_id=?", (id,))
+    logs = c.fetchall()
+
+    conn.close()
+
+    return render_template('asset.html', data=data, scan=new_count, logs=logs)
 
 # ---------------- RUN SERVER ----------------
 if __name__ == '__main__':
