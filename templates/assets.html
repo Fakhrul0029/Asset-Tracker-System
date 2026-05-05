@@ -7,6 +7,7 @@
 
 <h2>All Assets</h2>
 
+<a href="/dashboard">🏠 Dashboard</a> |
 <a href="/">➕ Add Asset</a>
 
 <br><br>
@@ -21,7 +22,7 @@
         <th>Action</th>
     </tr>
 
-    {% for row in data %}
+    {% for row in assets %}
     <tr>
         <td>{{ row[0] }}</td>
         <td>{{ row[1] }}</td>
