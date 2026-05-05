@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from datetime import datetime
+import qrcode
 import os
 
 app = Flask(__name__)
 
-# ---------------- DATABASE ----------------
+# ---------------- DB ----------------
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -35,7 +36,7 @@ def init_db():
 
 init_db()
 
-# ---------------- LOG FUNCTION ----------------
+# ---------------- LOG ----------------
 def add_log(asset_id, action):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -52,7 +53,7 @@ def add_log(asset_id, action):
 
 # ---------------- HOME ----------------
 @app.route('/')
-def index():
+def home():
     return redirect(url_for('dashboard'))
 
 # ---------------- DASHBOARD ----------------
@@ -78,16 +79,14 @@ def dashboard():
 
     conn.close()
 
-    return render_template(
-        'dashboard.html',
-        total=total,
-        working=working,
-        faulty=faulty,
-        maintenance=maintenance,
-        scans=scans
-    )
+    return render_template("dashboard.html",
+                           total=total,
+                           working=working,
+                           faulty=faulty,
+                           maintenance=maintenance,
+                           scans=scans)
 
-# ---------------- VIEW ALL ----------------
+# ---------------- VIEW ALL ASSETS ----------------
 @app.route('/assets')
 def assets():
     conn = sqlite3.connect('database.db')
@@ -98,14 +97,14 @@ def assets():
 
     conn.close()
 
-    return render_template('assets.html', assets=data)
+    return render_template("assets.html", assets=data)
 
-# ---------------- ADD PAGE (IMPORTANT FIX #1) ----------------
+# ---------------- ADD PAGE ----------------
 @app.route('/add', methods=['GET'])
 def add_page():
-    return render_template('add.html')
+    return render_template("add.html")
 
-# ---------------- ADD ACTION (POST ONLY) ----------------
+# ---------------- ADD ACTION ----------------
 @app.route('/add', methods=['POST'])
 def add():
     cpu_name = request.form.get('cpu_name')
@@ -113,12 +112,12 @@ def add():
     status = request.form.get('status')
 
     if not cpu_name or not serial or not status:
-        return "Missing form data"
+        return "Missing data"
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     c.execute("""
         INSERT INTO assets (cpu_name, serial_number, status, last_updated)
@@ -126,11 +125,21 @@ def add():
     """, (cpu_name, serial, status, now))
 
     asset_id = c.lastrowid
-
     conn.commit()
     conn.close()
 
     add_log(asset_id, "Asset Created")
+
+    # ---------------- QR ----------------
+    base_url = "https://asset-tracker-system-jg9d.onrender.com"
+    url = f"{base_url}/asset/{asset_id}"
+
+    qr = qrcode.make(url)
+
+    if not os.path.exists("static"):
+        os.makedirs("static")
+
+    qr.save(f"static/qr_{asset_id}.png")
 
     return redirect(url_for('assets'))
 
@@ -158,9 +167,9 @@ def asset(id):
 
     conn.close()
 
-    return render_template('asset.html', data=data, scan=new_count, logs=logs)
+    return render_template("asset.html", data=data, scan=new_count, logs=logs)
 
 # ---------------- RUN ----------------
-if __name__ == '__main__':
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host="0.0.0.0", port=port)
