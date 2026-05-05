@@ -11,7 +11,6 @@ def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
-    # Assets table
     c.execute('''
     CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +22,6 @@ def init_db():
     )
     ''')
 
-    # Logs table
     c.execute('''
     CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +86,7 @@ def dashboard():
         scans=scans
     )
 
-# ---------------- VIEW ALL ASSETS (FIX ADDED) ----------------
+# ---------------- VIEW ALL ASSETS ----------------
 @app.route('/assets')
 def assets():
     conn = sqlite3.connect('database.db')
@@ -106,47 +104,55 @@ def assets():
 def index():
     return redirect('/dashboard')
 
-# ---------------- ADD ASSET ----------------
+# ---------------- ADD ASSET (FIXED + SAFE) ----------------
 @app.route('/add', methods=['POST'])
 def add():
-    cpu_name = request.form['cpu_name']
-    serial = request.form['serial']
-    status = request.form['status']
+    try:
+        cpu_name = request.form.get('cpu_name')
+        serial = request.form.get('serial')
+        status = request.form.get('status')
 
-    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+        if not cpu_name or not serial or not status:
+            return "Missing form data"
 
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
+        now = datetime.now().strftime("%d-%m-%Y %H:%M")
 
-    c.execute("""
-        INSERT INTO assets (cpu_name, serial_number, status, last_updated)
-        VALUES (?, ?, ?, ?)
-    """, (cpu_name, serial, status, now))
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
 
-    asset_id = c.lastrowid
+        c.execute("""
+            INSERT INTO assets (cpu_name, serial_number, status, last_updated)
+            VALUES (?, ?, ?, ?)
+        """, (cpu_name, serial, status, now))
 
-    conn.commit()
-    conn.close()
+        asset_id = c.lastrowid
 
-    add_log(asset_id, "Asset Created")
+        conn.commit()
+        conn.close()
 
-    base_url = "https://asset-tracker-system-jg9d.onrender.com"
-    url = f"{base_url}/asset/{asset_id}"
+        add_log(asset_id, "Asset Created")
 
-    qr = qrcode.make(url)
+        # ---------------- QR CODE ----------------
+        base_url = "https://asset-tracker-system-jg9d.onrender.com"
+        url = f"{base_url}/asset/{asset_id}"
 
-    if not os.path.exists("static"):
-        os.makedirs("static")
+        qr = qrcode.make(url)
 
-    qr_path = f"static/qr_{asset_id}.png"
-    qr.save(qr_path)
+        if not os.path.exists("static"):
+            os.makedirs("static")
 
-    return f"""
-    <h2>Asset Added Successfully!</h2>
-    <p>Scan this QR:</p>
-    <img src='/{qr_path}' width='200'>
-    <br><a href='/dashboard'>Go Dashboard</a>
-    """
+        qr_path = os.path.join("static", f"qr_{asset_id}.png")
+        qr.save(qr_path)
+
+        return f"""
+        <h2>Asset Added Successfully!</h2>
+        <p>Scan this QR:</p>
+        <img src='/{qr_path}' width='200'>
+        <br><a href='/dashboard'>Go Dashboard</a>
+        """
+
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 # ---------------- VIEW ASSET ----------------
 @app.route('/asset/<int:id>')
