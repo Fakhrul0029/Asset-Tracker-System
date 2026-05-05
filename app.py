@@ -117,7 +117,7 @@ def add():
 
     add_log(asset_id, "Asset Created")
 
-    base_url = "https://your-app-name.onrender.com"
+    base_url = "https://asset-tracker-system-jg9d.onrender.com/dashboard"
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
