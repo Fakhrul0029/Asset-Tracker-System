@@ -68,7 +68,20 @@ def add():
 
     return render_template('success.html', qr_path=qr_path)
 
-# ---------------- VIEW ASSET ----------------
+# ---------------- VIEW ALL ASSETS ----------------
+@app.route('/assets')
+def assets():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM assets")
+    data = c.fetchall()
+
+    conn.close()
+
+    return render_template('assets.html', data=data)
+
+# ---------------- VIEW SINGLE ASSET ----------------
 @app.route('/asset/<int:id>')
 def asset(id):
     conn = sqlite3.connect('database.db')
