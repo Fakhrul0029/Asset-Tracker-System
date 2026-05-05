@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
 import qrcode
@@ -23,7 +23,7 @@ def init_db():
     )
     ''')
 
-    # Logs table (NEW FEATURE)
+    # Logs table
     c.execute('''
     CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,10 +53,45 @@ def add_log(asset_id, action):
     conn.commit()
     conn.close()
 
+# ---------------- DASHBOARD (NEW FEATURE) ----------------
+@app.route('/dashboard')
+def dashboard():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("SELECT COUNT(*) FROM assets")
+    total = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Working'")
+    working = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Faulty'")
+    faulty = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Maintenance'")
+    maintenance = c.fetchone()[0]
+
+    c.execute("SELECT SUM(scan_count) FROM assets")
+    scans = c.fetchone()[0]
+
+    if scans is None:
+        scans = 0
+
+    conn.close()
+
+    return render_template(
+        'dashboard.html',
+        total=total,
+        working=working,
+        faulty=faulty,
+        maintenance=maintenance,
+        scans=scans
+    )
+
 # ---------------- HOME PAGE ----------------
 @app.route('/')
 def index():
-    return render_template('add.html')
+    return redirect('/dashboard')
 
 # ---------------- ADD ASSET ----------------
 @app.route('/add', methods=['POST'])
@@ -80,11 +115,9 @@ def add():
     conn.commit()
     conn.close()
 
-    # LOG: asset created
     add_log(asset_id, "Asset Created")
 
-    # ---------------- QR CODE ----------------
-    base_url = "https://your-app-name.onrender.com"  # CHANGE THIS AFTER DEPLOY
+    base_url = "https://your-app-name.onrender.com"
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
@@ -99,7 +132,7 @@ def add():
     <h2>Asset Added Successfully!</h2>
     <p>Scan this QR:</p>
     <img src='/{qr_path}' width='200'>
-    <br><a href='/'>Go Back</a>
+    <br><a href='/dashboard'>Go Dashboard</a>
     """
 
 # ---------------- VIEW ASSET ----------------
@@ -114,17 +147,14 @@ def asset(id):
     if not data:
         return "Asset not found"
 
-    # update scan count
     new_count = data[4] + 1
 
     c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
     conn.commit()
     conn.close()
 
-    # LOG: QR scanned
     add_log(id, "QR Scanned")
 
-    # get logs
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
