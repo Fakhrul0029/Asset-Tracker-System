@@ -104,16 +104,13 @@ def assets():
 def index():
     return redirect('/dashboard')
 
-# ---------------- ADD ASSET (FIXED + SAFE) ----------------
+# ---------------- ADD ASSET (FIXED FOR RENDER) ----------------
 @app.route('/add', methods=['POST'])
 def add():
     try:
         cpu_name = request.form.get('cpu_name')
         serial = request.form.get('serial')
         status = request.form.get('status')
-
-        if not cpu_name or not serial or not status:
-            return "Missing form data"
 
         now = datetime.now().strftime("%d-%m-%Y %H:%M")
 
@@ -132,24 +129,21 @@ def add():
 
         add_log(asset_id, "Asset Created")
 
-        # ---------------- QR CODE ----------------
+        # ---------------- QR CODE (SAFE VERSION) ----------------
         base_url = "https://asset-tracker-system-jg9d.onrender.com"
         url = f"{base_url}/asset/{asset_id}"
 
         qr = qrcode.make(url)
 
-        if not os.path.exists("static"):
-            os.makedirs("static")
+        # IMPORTANT: do NOT rely on file system on Render
+        static_folder = "static"
+        if not os.path.exists(static_folder):
+            os.makedirs(static_folder)
 
-        qr_path = os.path.join("static", f"qr_{asset_id}.png")
+        qr_path = os.path.join(static_folder, f"qr_{asset_id}.png")
         qr.save(qr_path)
 
-        return f"""
-        <h2>Asset Added Successfully!</h2>
-        <p>Scan this QR:</p>
-        <img src='/{qr_path}' width='200'>
-        <br><a href='/dashboard'>Go Dashboard</a>
-        """
+        return redirect('/dashboard')
 
     except Exception as e:
         return f"Error: {str(e)}"
@@ -186,4 +180,4 @@ def asset(id):
 
 # ---------------- RUN SERVER ----------------
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=10000)
