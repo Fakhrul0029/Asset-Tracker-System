@@ -7,7 +7,6 @@
 
 <h2>All Assets</h2>
 
-<a href="/dashboard">🏠 Dashboard</a> |
 <a href="/">➕ Add Asset</a>
 
 <br><br>
@@ -16,13 +15,13 @@
     <tr>
         <th>ID</th>
         <th>CPU Name</th>
-        <th>Serial Number</th>
+        <th>Serial</th>
         <th>Status</th>
         <th>Last Updated</th>
         <th>Action</th>
     </tr>
 
-    {% for row in assets %}
+    {% for row in data %}
     <tr>
         <td>{{ row[0] }}</td>
         <td>{{ row[1] }}</td>
@@ -34,7 +33,6 @@
         </td>
     </tr>
     {% endfor %}
-
 </table>
 
 </body>
