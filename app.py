@@ -112,15 +112,16 @@ def add():
         serial = request.form.get('serial')
         status = request.form.get('status')
 
-        now = datetime.now().strftime("%d-%m-%Y %H:%M")
+        if not cpu_name or not serial or not status:
+            return "Missing form data"
 
         conn = sqlite3.connect('database.db')
         c = conn.cursor()
 
         c.execute("""
             INSERT INTO assets (cpu_name, serial_number, status, last_updated)
-            VALUES (?, ?, ?, ?)
-        """, (cpu_name, serial, status, now))
+            VALUES (?, ?, ?, datetime('now'))
+        """, (cpu_name, serial, status))
 
         asset_id = c.lastrowid
 
@@ -129,24 +130,10 @@ def add():
 
         add_log(asset_id, "Asset Created")
 
-        # ---------------- QR CODE (SAFE VERSION) ----------------
-        base_url = "https://asset-tracker-system-jg9d.onrender.com"
-        url = f"{base_url}/asset/{asset_id}"
-
-        qr = qrcode.make(url)
-
-        # IMPORTANT: do NOT rely on file system on Render
-        static_folder = "static"
-        if not os.path.exists(static_folder):
-            os.makedirs(static_folder)
-
-        qr_path = os.path.join(static_folder, f"qr_{asset_id}.png")
-        qr.save(qr_path)
-
         return redirect('/dashboard')
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"ERROR: {str(e)}"
 
 # ---------------- VIEW ASSET ----------------
 @app.route('/asset/<int:id>')
