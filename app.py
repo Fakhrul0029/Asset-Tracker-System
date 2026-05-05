@@ -53,7 +53,7 @@ def add_log(asset_id, action):
     conn.commit()
     conn.close()
 
-# ---------------- DASHBOARD (NEW FEATURE) ----------------
+# ---------------- DASHBOARD ----------------
 @app.route('/dashboard')
 def dashboard():
     conn = sqlite3.connect('database.db')
@@ -117,7 +117,8 @@ def add():
 
     add_log(asset_id, "Asset Created")
 
-    base_url = "https://asset-tracker-system-jg9d.onrender.com/dashboard"
+    # ---------------- FIXED QR CODE ----------------
+    base_url = "https://asset-tracker-system-jg9d.onrender.com"
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
