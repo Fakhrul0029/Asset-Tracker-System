@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 
@@ -49,7 +50,7 @@ def add_log(asset_id, action):
     conn.commit()
     conn.close()
 
-# ---------------- HOME (DIRECT TO DASHBOARD) ----------------
+# ---------------- HOME ----------------
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
@@ -86,7 +87,7 @@ def dashboard():
         scans=scans
     )
 
-# ---------------- VIEW ALL ASSETS ----------------
+# ---------------- VIEW ALL ----------------
 @app.route('/assets')
 def assets():
     conn = sqlite3.connect('database.db')
@@ -99,7 +100,12 @@ def assets():
 
     return render_template('assets.html', assets=data)
 
-# ---------------- ADD ASSET (FULLY FIXED) ----------------
+# ---------------- ADD PAGE (IMPORTANT FIX #1) ----------------
+@app.route('/add', methods=['GET'])
+def add_page():
+    return render_template('add.html')
+
+# ---------------- ADD ACTION (POST ONLY) ----------------
 @app.route('/add', methods=['POST'])
 def add():
     cpu_name = request.form.get('cpu_name')
@@ -126,7 +132,6 @@ def add():
 
     add_log(asset_id, "Asset Created")
 
-    # IMPORTANT: redirect instead of rendering
     return redirect(url_for('assets'))
 
 # ---------------- VIEW ASSET ----------------
@@ -157,4 +162,5 @@ def asset(id):
 
 # ---------------- RUN ----------------
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
