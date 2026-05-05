@@ -88,6 +88,19 @@ def dashboard():
         scans=scans
     )
 
+# ---------------- VIEW ALL ASSETS (FIX ADDED) ----------------
+@app.route('/assets')
+def assets():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM assets")
+    data = c.fetchall()
+
+    conn.close()
+
+    return render_template('assets.html', assets=data)
+
 # ---------------- HOME PAGE ----------------
 @app.route('/')
 def index():
@@ -117,7 +130,6 @@ def add():
 
     add_log(asset_id, "Asset Created")
 
-    # ---------------- FIXED QR CODE ----------------
     base_url = "https://asset-tracker-system-jg9d.onrender.com"
     url = f"{base_url}/asset/{asset_id}"
 
