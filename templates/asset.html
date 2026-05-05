@@ -28,5 +28,28 @@
 <p><b>Scan Count:</b> {{ scan }}</p>
 <p><b>Last Updated:</b> {{ data[5] }}</p>
 
+<br>
+
+<!-- 🔥 LOG SECTION (NEW FEATURE) -->
+<h3>📊 Activity Log</h3>
+
+{% if logs %}
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Action</th>
+        <th>Timestamp</th>
+    </tr>
+
+    {% for log in logs %}
+    <tr>
+        <td>{{ log[2] }}</td>
+        <td>{{ log[3] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No activity logs yet.</p>
+{% endif %}
+
 </body>
 </html>
