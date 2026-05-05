@@ -32,7 +32,7 @@ init_db()
 def index():
     return render_template('add.html')
 
-# ---------------- ADD ----------------
+# ---------------- ADD ASSET ----------------
 @app.route('/add', methods=['POST'])
 def add():
     cpu_name = request.form['cpu_name']
@@ -54,8 +54,10 @@ def add():
     conn.commit()
     conn.close()
 
-    # QR (temporary localhost first)
-    url = f"http://127.0.0.1:5000/asset/{asset_id}"
+    # ---------------- QR CODE ----------------
+    base_url = "http://127.0.0.1:5000"  # CHANGE when deploy
+    url = f"{base_url}/asset/{asset_id}"
+
     qr = qrcode.make(url)
 
     if not os.path.exists("static"):
@@ -64,13 +66,9 @@ def add():
     qr_path = f"static/qr_{asset_id}.png"
     qr.save(qr_path)
 
-    return f"""
-    <h2>Asset Added</h2>
-    <img src='/{qr_path}' width='200'>
-    <br><a href='/'>Back</a>
-    """
+    return render_template('success.html', qr_path=qr_path)
 
-# ---------------- VIEW ----------------
+# ---------------- VIEW ASSET ----------------
 @app.route('/asset/<int:id>')
 def asset(id):
     conn = sqlite3.connect('database.db')
@@ -80,11 +78,11 @@ def asset(id):
     data = c.fetchone()
 
     if not data:
-        return "Not found"
+        return "Asset not found"
 
     new_count = data[4] + 1
-    c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
 
+    c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
     conn.commit()
     conn.close()
 
