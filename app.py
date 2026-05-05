@@ -27,12 +27,12 @@ def init_db():
 
 init_db()
 
-# ---------------- HOME PAGE ----------------
+# ---------------- HOME ----------------
 @app.route('/')
 def index():
     return render_template('add.html')
 
-# ---------------- ADD ASSET ----------------
+# ---------------- ADD ----------------
 @app.route('/add', methods=['POST'])
 def add():
     cpu_name = request.form['cpu_name']
@@ -54,10 +54,8 @@ def add():
     conn.commit()
     conn.close()
 
-    # ---------------- QR CODE ----------------
-    base_url = "https://asset-tracker-system-jg9d.onrender.com"  # CHANGE AFTER DEPLOY
-    url = f"{base_url}/asset/{asset_id}"
-
+    # QR (temporary localhost first)
+    url = f"http://127.0.0.1:5000/asset/{asset_id}"
     qr = qrcode.make(url)
 
     if not os.path.exists("static"):
@@ -67,13 +65,12 @@ def add():
     qr.save(qr_path)
 
     return f"""
-    <h2>Asset Added Successfully!</h2>
-    <p>Scan this QR:</p>
+    <h2>Asset Added</h2>
     <img src='/{qr_path}' width='200'>
-    <br><a href='/'>Go Back</a>
+    <br><a href='/'>Back</a>
     """
 
-# ---------------- VIEW ASSET ----------------
+# ---------------- VIEW ----------------
 @app.route('/asset/<int:id>')
 def asset(id):
     conn = sqlite3.connect('database.db')
@@ -83,11 +80,11 @@ def asset(id):
     data = c.fetchone()
 
     if not data:
-        return "Asset not found"
+        return "Not found"
 
     new_count = data[4] + 1
-
     c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
+
     conn.commit()
     conn.close()
 
@@ -95,4 +92,4 @@ def asset(id):
 
 # ---------------- RUN ----------------
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
