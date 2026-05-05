@@ -55,7 +55,7 @@ def add():
     conn.close()
 
     # ---------------- QR CODE ----------------
-    base_url = "https://your-app-name.onrender.com"  # CHANGE AFTER DEPLOY
+    base_url = "https://asset-tracker-system-jg9d.onrender.com"  # CHANGE AFTER DEPLOY
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
