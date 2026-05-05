@@ -1,8 +1,6 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from datetime import datetime
-import qrcode
-import os
 
 app = Flask(__name__)
 
@@ -41,7 +39,7 @@ def add_log(asset_id, action):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
-    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     c.execute("""
         INSERT INTO logs (asset_id, action, timestamp)
@@ -50,6 +48,11 @@ def add_log(asset_id, action):
 
     conn.commit()
     conn.close()
+
+# ---------------- HOME (DIRECT TO DASHBOARD) ----------------
+@app.route('/')
+def index():
+    return redirect(url_for('dashboard'))
 
 # ---------------- DASHBOARD ----------------
 @app.route('/dashboard')
@@ -70,10 +73,7 @@ def dashboard():
     maintenance = c.fetchone()[0]
 
     c.execute("SELECT SUM(scan_count) FROM assets")
-    scans = c.fetchone()[0]
-
-    if scans is None:
-        scans = 0
+    scans = c.fetchone()[0] or 0
 
     conn.close()
 
@@ -92,48 +92,42 @@ def assets():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
-    c.execute("SELECT * FROM assets")
+    c.execute("SELECT * FROM assets ORDER BY id DESC")
     data = c.fetchall()
 
     conn.close()
 
     return render_template('assets.html', assets=data)
 
-# ---------------- HOME PAGE ----------------
-@app.route('/')
-def index():
-    return redirect('/dashboard')
-
-# ---------------- ADD ASSET (FIXED FOR RENDER) ----------------
+# ---------------- ADD ASSET (FULLY FIXED) ----------------
 @app.route('/add', methods=['POST'])
 def add():
-    try:
-        cpu_name = request.form.get('cpu_name')
-        serial = request.form.get('serial')
-        status = request.form.get('status')
+    cpu_name = request.form.get('cpu_name')
+    serial = request.form.get('serial')
+    status = request.form.get('status')
 
-        if not cpu_name or not serial or not status:
-            return "Missing form data"
+    if not cpu_name or not serial or not status:
+        return "Missing form data"
 
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
 
-        c.execute("""
-            INSERT INTO assets (cpu_name, serial_number, status, last_updated)
-            VALUES (?, ?, ?, datetime('now'))
-        """, (cpu_name, serial, status))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        asset_id = c.lastrowid
+    c.execute("""
+        INSERT INTO assets (cpu_name, serial_number, status, last_updated)
+        VALUES (?, ?, ?, ?)
+    """, (cpu_name, serial, status, now))
 
-        conn.commit()
-        conn.close()
+    asset_id = c.lastrowid
 
-        add_log(asset_id, "Asset Created")
+    conn.commit()
+    conn.close()
 
-        return redirect('/dashboard')
+    add_log(asset_id, "Asset Created")
 
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+    # IMPORTANT: redirect instead of rendering
+    return redirect(url_for('assets'))
 
 # ---------------- VIEW ASSET ----------------
 @app.route('/asset/<int:id>')
@@ -151,20 +145,16 @@ def asset(id):
 
     c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
     conn.commit()
-    conn.close()
 
     add_log(id, "QR Scanned")
 
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM logs WHERE asset_id=?", (id,))
+    c.execute("SELECT * FROM logs WHERE asset_id=? ORDER BY id DESC", (id,))
     logs = c.fetchall()
 
     conn.close()
 
     return render_template('asset.html', data=data, scan=new_count, logs=logs)
 
-# ---------------- RUN SERVER ----------------
+# ---------------- RUN ----------------
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
