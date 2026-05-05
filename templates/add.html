@@ -8,6 +8,10 @@
 <h2>Asset Tracker System</h2>
 
 <!-- 🔘 NAVIGATION -->
+<a href="/dashboard">
+    <button>🏠 Dashboard</button>
+</a>
+
 <a href="/assets">
     <button>📋 View All Assets</button>
 </a>
@@ -24,10 +28,10 @@
     <input type="text" name="serial" required><br><br>
 
     <label>Status:</label><br>
-    <select name="status">
-        <option>Working</option>
-        <option>Faulty</option>
-        <option>Maintenance</option>
+    <select name="status" required>
+        <option value="Working">Working</option>
+        <option value="Faulty">Faulty</option>
+        <option value="Maintenance">Maintenance</option>
     </select><br><br>
 
     <button type="submit">➕ Add Asset</button>
