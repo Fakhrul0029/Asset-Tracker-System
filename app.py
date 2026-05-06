@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import sqlite3
 from datetime import datetime
 import qrcode
@@ -32,7 +32,7 @@ init_db()
 def index():
     return render_template('add.html')
 
-# ---------------- ADD ASSET ----------------
+# ---------------- ADD ----------------
 @app.route('/add', methods=['POST'])
 def add():
     cpu_name = request.form['cpu_name']
@@ -50,12 +50,10 @@ def add():
     """, (cpu_name, serial, status, now))
 
     asset_id = c.lastrowid
-
     conn.commit()
     conn.close()
 
-    # ---------------- QR CODE ----------------
-    base_url = "http://127.0.0.1:5000"  # CHANGE when deploy
+    base_url = "http://127.0.0.1:5000"
     url = f"{base_url}/asset/{asset_id}"
 
     qr = qrcode.make(url)
@@ -68,7 +66,7 @@ def add():
 
     return render_template('success.html', qr_path=qr_path)
 
-# ---------------- VIEW ALL ASSETS ----------------
+# ---------------- VIEW ALL ----------------
 @app.route('/assets')
 def assets():
     conn = sqlite3.connect('database.db')
@@ -81,7 +79,39 @@ def assets():
 
     return render_template('assets.html', data=data)
 
-# ---------------- VIEW SINGLE ASSET ----------------
+# ---------------- LIVE SEARCH ----------------
+@app.route('/search')
+def search():
+    keyword = request.args.get('q')
+
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    query = """
+    SELECT * FROM assets
+    WHERE cpu_name LIKE ? OR serial_number LIKE ?
+    """
+
+    keyword = f"%{keyword}%"
+    c.execute(query, (keyword, keyword))
+
+    results = c.fetchall()
+    conn.close()
+
+    # convert to JSON
+    data = []
+    for row in results:
+        data.append({
+            "id": row[0],
+            "cpu_name": row[1],
+            "serial": row[2],
+            "status": row[3],
+            "last_updated": row[5]
+        })
+
+    return jsonify(data)
+
+# ---------------- VIEW SINGLE ----------------
 @app.route('/asset/<int:id>')
 def asset(id):
     conn = sqlite3.connect('database.db')
@@ -94,8 +124,8 @@ def asset(id):
         return "Asset not found"
 
     new_count = data[4] + 1
-
     c.execute("UPDATE assets SET scan_count=? WHERE id=?", (new_count, id))
+
     conn.commit()
     conn.close()
 
