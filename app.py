@@ -11,6 +11,7 @@ def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
+    # ASSETS TABLE
     c.execute('''
     CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,15 +23,80 @@ def init_db():
     )
     ''')
 
+    # LOGS TABLE (NEW)
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_id INTEGER,
+        action TEXT,
+        timestamp TEXT
+    )
+    ''')
+
     conn.commit()
     conn.close()
 
 init_db()
 
+# ---------------- LOG FUNCTION ----------------
+def add_log(asset_id, action):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+
+    c.execute("""
+        INSERT INTO logs (asset_id, action, timestamp)
+        VALUES (?, ?, ?)
+    """, (asset_id, action, now))
+
+    conn.commit()
+    conn.close()
+
+# ---------------- DASHBOARD ----------------
+@app.route('/dashboard')
+def dashboard():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    # Stats
+    c.execute("SELECT COUNT(*) FROM assets")
+    total = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Working'")
+    working = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Faulty'")
+    faulty = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM assets WHERE status='Maintenance'")
+    maintenance = c.fetchone()[0]
+
+    # Logs (latest 10)
+    c.execute("""
+        SELECT logs.action, logs.timestamp, assets.cpu_name
+        FROM logs
+        LEFT JOIN assets ON logs.asset_id = assets.id
+        ORDER BY logs.id DESC
+        LIMIT 10
+    """)
+    logs = c.fetchall()
+
+    conn.close()
+
+    return render_template(
+        'dashboard.html',
+        total=total,
+        working=working,
+        faulty=faulty,
+        maintenance=maintenance,
+        logs=logs
+    )
+
 # ---------------- HOME ----------------
 @app.route('/')
 def index():
-    return render_template('add.html')
+    return redirect('/dashboard')
 
 # ---------------- ADD ----------------
 @app.route('/add', methods=['POST'])
@@ -52,6 +118,9 @@ def add():
     asset_id = c.lastrowid
     conn.commit()
     conn.close()
+
+    # LOG
+    add_log(asset_id, "Asset Created")
 
     base_url = "http://127.0.0.1:5000"
     url = f"{base_url}/asset/{asset_id}"
@@ -108,7 +177,7 @@ def search():
 
     return jsonify(data)
 
-# ---------------- EDIT PAGE ----------------
+# ---------------- EDIT ----------------
 @app.route('/edit/<int:id>')
 def edit(id):
     conn = sqlite3.connect('database.db')
@@ -139,6 +208,8 @@ def update(id):
     conn.commit()
     conn.close()
 
+    add_log(id, "Status Updated")
+
     return redirect(f'/asset/{id}')
 
 # ---------------- DELETE ----------------
@@ -148,9 +219,10 @@ def delete(id):
     c = conn.cursor()
 
     c.execute("DELETE FROM assets WHERE id=?", (id,))
-
     conn.commit()
     conn.close()
+
+    add_log(id, "Asset Deleted")
 
     return redirect('/assets')
 
@@ -171,6 +243,8 @@ def asset(id):
 
     conn.commit()
     conn.close()
+
+    add_log(id, "QR Scanned")
 
     return render_template('asset.html', data=data, scan=new_count)
 
