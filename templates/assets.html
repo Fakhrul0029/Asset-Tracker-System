@@ -11,7 +11,12 @@
 
 <br><br>
 
-<table border="1" cellpadding="10">
+<!-- 🔍 SEARCH BAR -->
+<input type="text" id="search" placeholder="Search CPU or Serial..." onkeyup="liveSearch()">
+
+<br><br>
+
+<table border="1" cellpadding="10" id="assetTable">
     <tr>
         <th>ID</th>
         <th>CPU Name</th>
@@ -34,6 +39,41 @@
     </tr>
     {% endfor %}
 </table>
+
+<script>
+function liveSearch() {
+    let keyword = document.getElementById("search").value;
+
+    fetch(`/search?q=${keyword}`)
+    .then(response => response.json())
+    .then(data => {
+        let table = document.getElementById("assetTable");
+
+        // remove old rows (keep header)
+        table.innerHTML = `
+        <tr>
+            <th>ID</th>
+            <th>CPU Name</th>
+            <th>Serial</th>
+            <th>Status</th>
+            <th>Last Updated</th>
+            <th>Action</th>
+        </tr>`;
+
+        data.forEach(row => {
+            table.innerHTML += `
+            <tr>
+                <td>${row.id}</td>
+                <td>${row.cpu_name}</td>
+                <td>${row.serial}</td>
+                <td>${row.status}</td>
+                <td>${row.last_updated}</td>
+                <td><a href="/asset/${row.id}">View</a></td>
+            </tr>`;
+        });
+    });
+}
+</script>
 
 </body>
 </html>
