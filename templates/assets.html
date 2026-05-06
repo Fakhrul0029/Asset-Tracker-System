@@ -11,33 +11,33 @@
 
 <br><br>
 
-<!-- 🔍 SEARCH BAR -->
-<input type="text" id="search" placeholder="Search CPU or Serial..." onkeyup="liveSearch()">
+<input type="text" id="search" placeholder="Search..." onkeyup="liveSearch()">
 
 <br><br>
 
 <table border="1" cellpadding="10" id="assetTable">
-    <tr>
-        <th>ID</th>
-        <th>CPU Name</th>
-        <th>Serial</th>
-        <th>Status</th>
-        <th>Last Updated</th>
-        <th>Action</th>
-    </tr>
+<tr>
+    <th>ID</th>
+    <th>CPU Name</th>
+    <th>Serial</th>
+    <th>Status</th>
+    <th>Last Updated</th>
+    <th>Action</th>
+</tr>
 
-    {% for row in data %}
-    <tr>
-        <td>{{ row[0] }}</td>
-        <td>{{ row[1] }}</td>
-        <td>{{ row[2] }}</td>
-        <td>{{ row[3] }}</td>
-        <td>{{ row[5] }}</td>
-        <td>
-            <a href="/asset/{{ row[0] }}">View</a>
-        </td>
-    </tr>
-    {% endfor %}
+{% for row in data %}
+<tr>
+    <td>{{ row[0] }}</td>
+    <td>{{ row[1] }}</td>
+    <td>{{ row[2] }}</td>
+    <td>{{ row[3] }}</td>
+    <td>{{ row[5] }}</td>
+    <td>
+        <a href="/asset/{{ row[0] }}">View</a> |
+        <a href="/edit/{{ row[0] }}">Edit</a>
+    </td>
+</tr>
+{% endfor %}
 </table>
 
 <script>
@@ -45,11 +45,10 @@ function liveSearch() {
     let keyword = document.getElementById("search").value;
 
     fetch(`/search?q=${keyword}`)
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
         let table = document.getElementById("assetTable");
 
-        // remove old rows (keep header)
         table.innerHTML = `
         <tr>
             <th>ID</th>
@@ -68,7 +67,10 @@ function liveSearch() {
                 <td>${row.serial}</td>
                 <td>${row.status}</td>
                 <td>${row.last_updated}</td>
-                <td><a href="/asset/${row.id}">View</a></td>
+                <td>
+                    <a href="/asset/${row.id}">View</a> |
+                    <a href="/edit/${row.id}">Edit</a>
+                </td>
             </tr>`;
         });
     });
