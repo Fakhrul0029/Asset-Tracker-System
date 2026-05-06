@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 import sqlite3
 from datetime import datetime
 import qrcode
@@ -79,7 +79,7 @@ def assets():
 
     return render_template('assets.html', data=data)
 
-# ---------------- LIVE SEARCH ----------------
+# ---------------- SEARCH ----------------
 @app.route('/search')
 def search():
     keyword = request.args.get('q')
@@ -87,18 +87,15 @@ def search():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
-    query = """
-    SELECT * FROM assets
-    WHERE cpu_name LIKE ? OR serial_number LIKE ?
-    """
-
     keyword = f"%{keyword}%"
-    c.execute(query, (keyword, keyword))
+    c.execute("""
+        SELECT * FROM assets
+        WHERE cpu_name LIKE ? OR serial_number LIKE ?
+    """, (keyword, keyword))
 
     results = c.fetchall()
     conn.close()
 
-    # convert to JSON
     data = []
     for row in results:
         data.append({
@@ -110,6 +107,39 @@ def search():
         })
 
     return jsonify(data)
+
+# ---------------- EDIT PAGE ----------------
+@app.route('/edit/<int:id>')
+def edit(id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM assets WHERE id=?", (id,))
+    data = c.fetchone()
+
+    conn.close()
+
+    return render_template('edit.html', data=data)
+
+# ---------------- UPDATE ----------------
+@app.route('/update/<int:id>', methods=['POST'])
+def update(id):
+    status = request.form['status']
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("""
+        UPDATE assets
+        SET status=?, last_updated=?
+        WHERE id=?
+    """, (status, now, id))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(f'/asset/{id}')
 
 # ---------------- VIEW SINGLE ----------------
 @app.route('/asset/<int:id>')
