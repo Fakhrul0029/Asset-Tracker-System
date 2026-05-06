@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Asset</title>
+</head>
+<body>
+
+<h2>Edit Asset</h2>
+
+<p><b>CPU:</b> {{ data[1] }}</p>
+<p><b>Serial:</b> {{ data[2] }}</p>
+
+<form action="/update/{{ data[0] }}" method="POST">
+
+    <label>Status:</label><br>
+    <select name="status">
+        <option {% if data[3]=='Working' %}selected{% endif %}>Working</option>
+        <option {% if data[3]=='Faulty' %}selected{% endif %}>Faulty</option>
+        <option {% if data[3]=='Maintenance' %}selected{% endif %}>Maintenance</option>
+    </select>
+
+    <br><br>
+    <button type="submit">Update</button>
+
+</form>
+
+<br>
+<a href="/assets">⬅️ Back</a>
+
+</body>
+</html>
