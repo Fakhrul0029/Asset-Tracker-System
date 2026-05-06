@@ -34,7 +34,11 @@
     <td>{{ row[5] }}</td>
     <td>
         <a href="/asset/{{ row[0] }}">View</a> |
-        <a href="/edit/{{ row[0] }}">Edit</a>
+        <a href="/edit/{{ row[0] }}">Edit</a> |
+        <a href="/delete/{{ row[0] }}"
+           onclick="return confirm('Delete this asset?')">
+           Delete
+        </a>
     </td>
 </tr>
 {% endfor %}
@@ -69,7 +73,11 @@ function liveSearch() {
                 <td>${row.last_updated}</td>
                 <td>
                     <a href="/asset/${row.id}">View</a> |
-                    <a href="/edit/${row.id}">Edit</a>
+                    <a href="/edit/${row.id}">Edit</a> |
+                    <a href="/delete/${row.id}"
+                       onclick="return confirm('Delete this asset?')">
+                       Delete
+                    </a>
                 </td>
             </tr>`;
         });
