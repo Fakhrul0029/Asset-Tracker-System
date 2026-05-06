@@ -141,6 +141,19 @@ def update(id):
 
     return redirect(f'/asset/{id}')
 
+# ---------------- DELETE ----------------
+@app.route('/delete/<int:id>')
+def delete(id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    c.execute("DELETE FROM assets WHERE id=?", (id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect('/assets')
+
 # ---------------- VIEW SINGLE ----------------
 @app.route('/asset/<int:id>')
 def asset(id):
